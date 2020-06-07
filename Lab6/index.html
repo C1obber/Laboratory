@@ -1,0 +1,89 @@
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" />
+</head>
+<body>
+    <div>
+        <form>
+            <select id="colorSelector">'
+                <option value="Выберите цвет" hidden>Выберите цвет</option>
+                <option value="red">Красный</option>
+                <option value="green">Зеленый</option>
+                <option value="orange">Оранжевый</option>
+            </select>
+            <select id="sizeSelector">
+                <option value="Выберите размер" hidden>Выберите размер</option>
+                <option value="400x600">400x600</option>
+                <option value="800x600">800x600</option>
+                <option value="1280x960">1280x960</option>
+            </select>
+            <input pattern="[a-zA-Z]{1,8}\s?\d?" id="text" required>
+            <input id="clickButton" type="submit" value="Получить картинку" onclick="RecieveAnswer(event)" />
+        </form>
+    </div>
+</body>
+
+<script>
+    clickButton.addEventListener('keypress', RecieveAnswer);
+    let buttonIsPressed = false;
+    function RecieveAnswer(event) {
+        event.preventDefault();
+        let reqBody = {
+            colorSelector: colorSelector.value,
+            text: text.value,
+            sizeSelector: sizeSelector.value,
+        }
+        fetch('http://localhost:8888/getPicture', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(reqBody)
+        })
+            .then(response => response.json())
+            .then(result => {
+                console.log(result);
+                if (result.name === 'not found') {
+                    text.value = result.name;
+                    sizeSelector.value = 'Выберите размер';
+                    colorSelector.value = 'Выберите цвет';
+                    return;
+                }
+                text.value = result.name.join(' ');
+                if (result.color === '#FF0000') { colorSelector.value = 'red' }
+                if (result.color === '#00FF00') { colorSelector.value = 'green' }
+                if (result.color === '#FF8000') { colorSelector.value = 'orange' }
+                if (result.size.width === '400') { sizeSelector.value = '400x600' }
+                if (result.size.width === '800') { sizeSelector.value = '800x600' }
+                if (result.size.width === '1280') { sizeSelector.value = '1280x960' }
+
+                if (!buttonIsPressed) {
+                    let previewButton = document.createElement('button');
+                    let buttonContent = document.createTextNode('Отобразить картинку');
+                    previewButton.setAttribute('onclick', 'showPicture(event)')
+                    previewButton.appendChild(buttonContent);
+                    document.body.appendChild(previewButton);
+                    let pictureWrapper = document.createElement('div');
+                    pictureWrapper.setAttribute('id', 'pictureWrapper');
+                    document.body.appendChild(pictureWrapper);
+                    buttonIsPressed = true;
+                }
+            });
+    }
+    function showPicture(event) {
+        console.log('pressed');
+        fetch('http://localhost:8888/picture/' +
+            text.value.trim().split(' ')[0] + '/' +
+            text.value.trim().split(' ')[1] + '/' +
+            colorSelector.value + '/' +
+            sizeSelector.value, {
+            method: 'GET',
+        })
+            .then(response => response.json())
+            .then(result => {
+                console.log(result);
+                pictureWrapper.innerHTML = result.page;
+            });
+    }
+</script>
+</html>
